@@ -28,5 +28,6 @@ RUN mkdir -p /opt/microservices
 COPY . /opt/microservices/
 EXPOSE 9080
 WORKDIR /opt/microservices
+COPY amalgam8-services.conf /etc/nginx/
 
-ENTRYPOINT ["a8sidecar", "--supervise", "python", "productpage.py", "9080", "http://localhost:6379"]
+ENTRYPOINT ["a8sidecar", "--supervise", "bash", "temp.sh"]
