@@ -36,6 +36,12 @@ import:
 - package: github.com/urfave/cli
   version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
 
+- package: github.com/golang/protobuf
+  version: 874264fbbb43f4d91e999fecb4b40143ed611400
+  subpackages:
+  - jsonpb
+  - proto
+
 - package: github.com/dgrijalva/jwt-go
   version: 2.3.0
 
