@@ -23,6 +23,18 @@ type Rule struct {
 	Tags        []string        `json:"tags,omitempty"`
 	Destination string          `json:"destination"`
 	Match       json.RawMessage `json:"match,omitempty"`
-	Route       json.RawMessage `json:"route,omitempty"`
+	Route       *Route          `json:"route,omitempty"`
 	Actions     json.RawMessage `json:"actions,omitempty"`
+}
+
+type Route struct {
+	Backends []Backend `json:"backends"`
+}
+
+type Backend struct {
+	Name    string   `json:"name"`
+	Tags    []string `json:"tags,omitempty"`
+	Weight  float64  `json:"weight,omitempty"`
+	Timeout float64  `json:"timeout,omitempty"`
+	Retries int      `json:"retries,omitempty"` // FIXME: this BREAKS disabling retries by setting them to 0!
 }

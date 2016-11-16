@@ -34,7 +34,7 @@ func TestFilterRules(t *testing.T) {
 		Tags:        []string{},
 		Destination: "service2",
 		Match:       []byte(`{}`),
-		Route:       []byte(`{}`),
+		Route:       &Route{},
 	}
 
 	cases := []struct {
