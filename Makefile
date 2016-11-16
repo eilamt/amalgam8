@@ -41,6 +41,7 @@ APP_VER		:= $(shell git describe 2> /dev/null || echo "unknown")
 REGISTRY_APP_NAME		:= a8registry
 CONTROLLER_APP_NAME		:= a8controller
 SIDECAR_APP_NAME		:= a8sidecar
+CLI_APP_NAME			:=  a8ctl-beta
 
 REGISTRY_IMAGE_NAME		:= amalgam8/a8-registry:latest
 CONTROLLER_IMAGE_NAME	:= amalgam8/a8-controller:latest
@@ -53,6 +54,7 @@ SIDECAR_DOCKERFILE		:= $(DOCKERDIR)/Dockerfile.sidecar.ubuntu
 REGISTRY_RELEASE_NAME	:= $(REGISTRY_APP_NAME)-$(APP_VER)-$(GOOS)-$(GOARCH)
 CONTROLLER_RELEASE_NAME	:= $(CONTROLLER_APP_NAME)-$(APP_VER)-$(GOOS)-$(GOARCH)
 SIDECAR_RELEASE_NAME	:= $(SIDECAR_APP_NAME)-$(APP_VER)-$(GOOS)-$(GOARCH)
+CLI_RELEASE_NAME	:= $(CLI_APP_NAME)-$(APP_VER)-$(GOOS)-$(GOARCH)
 
 EXAMPLES_RELEASE_NAME	:= a8examples-$(APP_VER)
 
@@ -82,9 +84,9 @@ precommit: format verify
 #---------
 #-- build
 #---------
-.PHONY: build build.registry build.controller build.sidecar compile clean
+.PHONY: build build.registry build.controller build.sidecar build.cli compile clean
 
-build: build.registry build.controller build.sidecar
+build: build.registry build.controller build.sidecar build.cli
 
 build.registry:
 	@echo "--> building registry"
@@ -97,6 +99,12 @@ build.controller:
 build.sidecar:
 	@echo "--> building sidecar"
 	@go build $(BUILDFLAGS) -ldflags '$(LDFLAGS)' -o $(BINDIR)/$(SIDECAR_APP_NAME) ./cmd/sidecar/
+
+build.cli: tools.go-bindata
+	@echo "--> building cli"
+	@go-bindata -pkg=utils -prefix "./cli" -o ./cli/utils/i18n_resources.go ./cli/locales
+	@go build $(BUILDFLAGS) -ldflags '$(LDFLAGS)' -o $(BINDIR)/$(CLI_APP_NAME) ./cmd/cli/
+	@goimports -w ./cli/utils/i18n_resources.go
 
 compile:
 	@echo "--> compiling packages"
@@ -185,18 +193,18 @@ dockerize.sidecar:
 #-- release
 #---------------
 
-.PHONY: release release.registry release.controller release.sidecar release.examples
+.PHONY: release release.registry release.controller release.sidecar release.cli release.examples
 
-release: release.registry release.controller release.sidecar release.examples
+release: release.registry release.controller release.sidecar release.cli release.examples
 
 release.registry:
 	@echo "--> packaging registry for release"
-	@mkdir -p $(RELEASEDIR) 
+	@mkdir -p $(RELEASEDIR)
 	@tar -czf $(RELEASEDIR)/$(REGISTRY_RELEASE_NAME).tar.gz --transform 's:^.*/::' $(BINDIR)/$(REGISTRY_APP_NAME) README.md LICENSE
 
 release.controller:
 	@echo "--> packaging controller for release"
-	@mkdir -p $(RELEASEDIR) 
+	@mkdir -p $(RELEASEDIR)
 	@tar -czf $(RELEASEDIR)/$(CONTROLLER_RELEASE_NAME).tar.gz --transform 's:^.*/::' $(BINDIR)/$(CONTROLLER_APP_NAME) README.md LICENSE
 
 release.sidecar:
@@ -214,6 +222,11 @@ release.sidecar:
 	@cp openresty/*.tar.gz $(BUILDDIR)/opt/openresty_dist/
 	@tar -C $(BUILDDIR) -czf $(RELEASEDIR)/$(SIDECAR_RELEASE_NAME).tar.gz --transform 's:^./::' .
 	@sed -e "s/A8SIDECAR_RELEASE=.*/A8SIDECAR_RELEASE=$(APP_VER)/" scripts/a8sidecar.sh > $(RELEASEDIR)/a8sidecar.sh
+
+release.cli:
+	@echo "--> packaging cli for release"
+	@mkdir -p $(RELEASEDIR)
+	@tar -czf $(RELEASEDIR)/$(CLI_RELEASE_NAME).tar.gz --transform 's:^.*/::' $(BINDIR)/$(CLI_APP_NAME) README.md LICENSE
 
 release.examples:
 	@echo "--> packaging examples for release"
@@ -252,4 +265,10 @@ tools.glide:
 		mkdir -p /tmp/glide-0.10.2-linux-amd64; \
 		wget -qO- https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.tar.gz | tar xz -C /tmp/glide-0.10.2-linux-amd64; \
 		cp /tmp/glide-0.10.2-linux-amd64/linux-amd64/glide ~/bin; \
+    fi
+
+tools.go-bindata:
+	@command -v go-bindata >/dev/null ; if [ $$? -ne 0 ]; then \
+		echo "--> installing go-bindata"; \
+		go get -u github.com/jteeuwen/go-bindata/...; \
     fi
