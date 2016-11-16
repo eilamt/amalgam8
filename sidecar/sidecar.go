@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -36,11 +35,11 @@ import (
 	"github.com/amalgam8/amalgam8/sidecar/dns"
 	"github.com/amalgam8/amalgam8/sidecar/proxy"
 	"github.com/amalgam8/amalgam8/sidecar/proxy/monitor"
-	"github.com/amalgam8/amalgam8/sidecar/proxy/nginx"
 	"github.com/amalgam8/amalgam8/sidecar/register"
 	"github.com/amalgam8/amalgam8/sidecar/register/healthcheck"
 	"github.com/amalgam8/amalgam8/sidecar/supervisor"
 	"github.com/ant0ine/go-json-rest/rest"
+	"github.com/amalgam8/amalgam8/sidecar/proxy/envoy"
 )
 
 // Main is the entrypoint for the sidecar when running as an executable
@@ -182,14 +181,15 @@ func Run(conf config.Config) error {
 func startProxy(conf *config.Config, registryMonitor monitor.RegistryMonitor) error {
 	var err error
 
-	nginxClient := nginx.NewClient("http://localhost:5813")
-	nginxManager := nginx.NewManager(
-		nginx.Config{
-			Service: nginx.NewService(fmt.Sprintf("%v:%v", conf.Service.Name, strings.Join(conf.Service.Tags, ","))),
-			Client:  nginxClient,
-		},
-	)
-	nginxProxy := proxy.NewNGINXProxy(nginxManager)
+	//nginxClient := nginx.NewClient("http://localhost:5813")
+	//nginxManager := nginx.NewManager(
+	//	nginx.Config{
+	//		Service: nginx.NewService(fmt.Sprintf("%v:%v", conf.Service.Name, strings.Join(conf.Service.Tags, ","))),
+	//		Client:  nginxClient,
+	//	},
+	//)
+	manager := envoy.NewManager()
+	envoyProxy := proxy.NewEnvoyProxy(manager)
 
 	controllerClient, err := controllerclient.New(controllerclient.Config{
 		URL:       conf.Controller.URL,
@@ -203,7 +203,7 @@ func startProxy(conf *config.Config, registryMonitor monitor.RegistryMonitor) er
 	controllerMonitor := monitor.NewController(monitor.ControllerConfig{
 		Client: controllerClient,
 		Listeners: []monitor.ControllerListener{
-			nginxProxy,
+			envoyProxy,
 		},
 		PollInterval: conf.Controller.Poll,
 	})
@@ -213,9 +213,9 @@ func startProxy(conf *config.Config, registryMonitor monitor.RegistryMonitor) er
 		}
 	}()
 
-	registryMonitor.AddListener(nginxProxy)
+	registryMonitor.AddListener(envoyProxy)
 
-	debugger := api.NewDebugAPI(nginxProxy)
+	debugger := api.NewDebugAPI(envoyProxy)
 
 	a := rest.NewApi()
 	a.Use(

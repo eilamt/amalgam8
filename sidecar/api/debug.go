@@ -25,11 +25,11 @@ import (
 
 // DebugAPI handles debugging API calls to sidecar for checking state
 type DebugAPI struct {
-	nginxProxy proxy.NGINXProxy
+	nginxProxy proxy.EnvoyProxy
 }
 
 // NewDebugAPI creates struct
-func NewDebugAPI(nginxProxy proxy.NGINXProxy) *DebugAPI {
+func NewDebugAPI(nginxProxy proxy.EnvoyProxy) *DebugAPI {
 	return &DebugAPI{
 		nginxProxy: nginxProxy,
 	}
