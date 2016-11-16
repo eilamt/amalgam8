@@ -19,7 +19,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/amalgam8/amalgam8/controller/rules"
-	"github.com/amalgam8/amalgam8/registry/client"
+	"github.com/amalgam8/amalgam8/registry/api"
 	"github.com/amalgam8/amalgam8/sidecar/proxy/envoy"
 	"github.com/amalgam8/amalgam8/sidecar/proxy/monitor"
 	"github.com/amalgam8/amalgam8/sidecar/proxy/nginx"
@@ -29,11 +29,11 @@ import (
 type EnvoyProxy interface {
 	monitor.ControllerListener
 	monitor.RegistryListener
-	GetState() ([]client.ServiceInstance, []rules.Rule)
+	GetState() ([]api.ServiceInstance, []rules.Rule)
 }
 
 type envoyProxy struct {
-	instances []client.ServiceInstance
+	instances []api.ServiceInstance
 	rules     []rules.Rule
 	envoy     envoy.Manager
 	mutex     sync.Mutex
@@ -43,13 +43,13 @@ type envoyProxy struct {
 func NewEnvoyProxy(envoyManager nginx.Manager) EnvoyProxy {
 	return &envoyProxy{
 		rules:     []rules.Rule{},
-		instances: []client.ServiceInstance{},
+		instances: []api.ServiceInstance{},
 		envoy:     envoyManager,
 	}
 }
 
 // CatalogChange updates NGINX on a change in the catalog
-func (n *envoyProxy) CatalogChange(instances []client.ServiceInstance) error {
+func (n *envoyProxy) CatalogChange(instances []api.ServiceInstance) error {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
@@ -71,7 +71,7 @@ func (n *envoyProxy) updateNGINX() error {
 	return n.envoy.Update(n.instances, n.rules)
 }
 
-func (n *envoyProxy) GetState() ([]client.ServiceInstance, []rules.Rule) {
+func (n *envoyProxy) GetState() ([]api.ServiceInstance, []rules.Rule) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 

@@ -9,11 +9,11 @@ import (
 	"sort"
 
 	"github.com/amalgam8/amalgam8/controller/rules"
-	registryclient "github.com/amalgam8/amalgam8/registry/client"
+	"github.com/amalgam8/amalgam8/registry/api"
 )
 
 type Manager interface {
-	Update(instances []registryclient.ServiceInstance, rules []rules.Rule) error
+	Update(instances []api.ServiceInstance, rules []rules.Rule) error
 }
 
 func NewManager() Manager {
@@ -26,7 +26,7 @@ type manager struct {
 	service Service
 }
 
-func (m *manager) Update(instances []registryclient.ServiceInstance, rules []rules.Rule) error {
+func (m *manager) Update(instances []api.ServiceInstance, rules []rules.Rule) error {
 	conf, err := generateConfig(rules, instances)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func writeConfig(writer io.Writer, conf interface{}) error {
 	return err
 }
 
-func registryInstancesToClusterManager(instances []registryclient.ServiceInstance) ClusterManager {
+func registryInstancesToClusterManager(instances []api.ServiceInstance) ClusterManager {
 	clusterManager := ClusterManager{}
 
 	clusterMap := make(map[string][]Host)
@@ -88,13 +88,13 @@ func registryInstancesToClusterManager(instances []registryclient.ServiceInstanc
 	return clusterManager
 }
 
-func endpointToHost(endpoint registryclient.ServiceEndpoint) Host {
+func endpointToHost(endpoint api.ServiceEndpoint) Host {
 	return Host{
 		URL: fmt.Sprintf(endpoint.Type + "://" + endpoint.Value),
 	}
 }
 
-func generateConfig(rules []rules.Rule, instances []registryclient.ServiceInstance) (Root, error) {
+func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, error) {
 	clusters, err := convert(rules, instances)
 	if err != nil {
 		return Root{}, nil
@@ -152,7 +152,7 @@ func generateConfig(rules []rules.Rule, instances []registryclient.ServiceInstan
 	}, nil
 }
 
-func convert(rules []rules.Rule, instances []registryclient.ServiceInstance) ([]Cluster, error) {
+func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, error) {
 	// Find unique routes
 	uniqueRoutes := make(map[string][]string)
 	for _, rule := range rules {

@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/amalgam8/amalgam8/registry/client"
-	"github.com/stretchr/testify/assert"
 	"github.com/amalgam8/amalgam8/controller/rules"
+	"github.com/amalgam8/amalgam8/registry/api"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConvert(t *testing.T) {
-	instances := []client.ServiceInstance{
+	instances := []api.ServiceInstance{
 		{
 			ServiceName: "freeflow1",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "tcp",
 				Value: "10.11.0.4:80",
 			},
@@ -31,24 +31,24 @@ func TestConvert(t *testing.T) {
 }
 
 func TestConvertFancy(t *testing.T) {
-	instances := []client.ServiceInstance{
+	instances := []api.ServiceInstance{
 		{
 			ServiceName: "service1",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "tcp",
 				Value: "10.0.0.1:80",
 			},
 		},
 		{
 			ServiceName: "service1",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "tcp",
 				Value: "10.0.0.2:80",
 			},
 		},
 		{
 			ServiceName: "service2",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "https",
 				Value: "10.0.0.3:80",
 			},
@@ -91,7 +91,7 @@ func TestConvertFancy(t *testing.T) {
 }
 
 func TestEndpointConvert(t *testing.T) {
-	endpoint := client.ServiceEndpoint{
+	endpoint := api.ServiceEndpoint{
 		Type:  "http",
 		Value: "10.1.2.45",
 	}
@@ -101,10 +101,10 @@ func TestEndpointConvert(t *testing.T) {
 }
 
 func TestConvert2(t *testing.T) {
-	instances := []client.ServiceInstance{
+	instances := []api.ServiceInstance{
 		{
 			ServiceName: "service1",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "tcp",
 				Value: "10.0.0.1:80",
 			},
@@ -112,7 +112,7 @@ func TestConvert2(t *testing.T) {
 		},
 		//{
 		//	ServiceName: "service1",
-		//	Endpoint: client.ServiceEndpoint{
+		//	Endpoint: api.ServiceEndpoint{
 		//		Type: "tcp",
 		//		Value: "10.0.0.2:80",
 		//	},
@@ -120,7 +120,7 @@ func TestConvert2(t *testing.T) {
 		//},
 		//{
 		//	ServiceName: "service1",
-		//	Endpoint: client.ServiceEndpoint{
+		//	Endpoint: api.ServiceEndpoint{
 		//		Type: "tcp",
 		//		Value: "10.0.0.3:80",
 		//	},
@@ -128,7 +128,7 @@ func TestConvert2(t *testing.T) {
 		//},
 		//{
 		//	ServiceName: "service1",
-		//	Endpoint: client.ServiceEndpoint{
+		//	Endpoint: api.ServiceEndpoint{
 		//		Type: "tcp",
 		//		Value: "10.0.0.4:80",
 		//	},
@@ -136,7 +136,7 @@ func TestConvert2(t *testing.T) {
 		//},
 		{
 			ServiceName: "service2",
-			Endpoint: client.ServiceEndpoint{
+			Endpoint: api.ServiceEndpoint{
 				Type:  "https",
 				Value: "10.0.0.5:80",
 			},
