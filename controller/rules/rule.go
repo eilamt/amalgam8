@@ -32,8 +32,8 @@ type Route struct {
 }
 
 type Backend struct {
-	Name    string   `json:"name"`
-	Tags    []string `json:"tags,omitempty"`
+	Name    string   `json:"name,omitempty"`
+	Tags    []string `json:"tags"`
 	Weight  float64  `json:"weight,omitempty"`
 	Timeout float64  `json:"timeout,omitempty"`
 	Retries int      `json:"retries,omitempty"` // FIXME: this BREAKS disabling retries by setting them to 0!
