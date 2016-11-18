@@ -113,7 +113,7 @@ func TestConvert2(t *testing.T) {
 		{
 			ServiceName: "service1",
 			Endpoint: api.ServiceEndpoint{
-				Type: "tcp",
+				Type:  "tcp",
 				Value: "10.0.0.2:80",
 			},
 			Tags: []string{"tag1"},
@@ -121,7 +121,7 @@ func TestConvert2(t *testing.T) {
 		{
 			ServiceName: "service1",
 			Endpoint: api.ServiceEndpoint{
-				Type: "tcp",
+				Type:  "tcp",
 				Value: "10.0.0.3:80",
 			},
 			Tags: []string{"tag2"},
@@ -129,7 +129,7 @@ func TestConvert2(t *testing.T) {
 		{
 			ServiceName: "service1",
 			Endpoint: api.ServiceEndpoint{
-				Type: "tcp",
+				Type:  "tcp",
 				Value: "10.0.0.4:80",
 			},
 			Tags: []string{"tag1", "tag2"},
@@ -145,7 +145,7 @@ func TestConvert2(t *testing.T) {
 
 	rules := []rules.Rule{
 		{
-			ID: "abcdef",
+			ID:          "abcdef",
 			Destination: "service1",
 			Route: &rules.Route{
 				Backends: []rules.Backend{
@@ -157,7 +157,7 @@ func TestConvert2(t *testing.T) {
 			},
 		},
 		{
-			ID: "abcdef",
+			ID:          "abcdef",
 			Destination: "service1",
 			Route: &rules.Route{
 				Backends: []rules.Backend{
@@ -169,9 +169,9 @@ func TestConvert2(t *testing.T) {
 			},
 		},
 		{
-			ID: "abcdef",
+			ID:          "abcdef",
 			Destination: "service2",
-			Actions: json.RawMessage([]byte{}),
+			Actions:     json.RawMessage([]byte{}),
 		},
 	}
 
@@ -366,8 +366,3 @@ func TestBookInfo(t *testing.T) {
 
 	fmt.Println(string(data))
 }
-
-
-
-
-

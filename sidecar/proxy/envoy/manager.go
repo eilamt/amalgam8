@@ -154,7 +154,7 @@ func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, 
 
 type uniqueRoute struct {
 	Service string
-	Tags []string
+	Tags    []string
 }
 
 func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, error) {
@@ -186,7 +186,7 @@ func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, er
 				key := buf.String()
 				uniqueRoutes[key] = uniqueRoute{
 					Service: service,
-					Tags: tags,
+					Tags:    tags,
 				}
 			}
 		}
