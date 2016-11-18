@@ -113,7 +113,7 @@ func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, 
 	return Root{
 		Listeners: []Listener{
 			{
-				Port: 8379,
+				Port: 6379,
 				Filters: []NetworkFilter{
 					{
 						Type: "read",
@@ -152,9 +152,14 @@ func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, 
 	}, nil
 }
 
+type uniqueRoute struct {
+	Service string
+	Tags []string
+}
+
 func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, error) {
 	// Find unique routes
-	uniqueRoutes := make(map[string][]string)
+	uniqueRoutes := make(map[string]uniqueRoute)
 	for _, rule := range rules {
 		if rule.Route != nil {
 			for _, backend := range rule.Route.Backends {
@@ -162,14 +167,27 @@ func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, er
 				copy(tags, backend.Tags)
 				sort.Strings(tags)
 
-				buf := bytes.NewBufferString(backend.Name)
+				buf := bytes.NewBufferString("")
+
+				// Backend name is optional: we default to the rule destination
+				var service string
+				if backend.Name != "" {
+					service = backend.Name
+				} else {
+					service = rule.Destination
+				}
+				buf.WriteString(service)
+
 				for _, tag := range tags {
 					buf.WriteString("_")
 					buf.WriteString(tag)
 				}
 
 				key := buf.String()
-				uniqueRoutes[key] = tags
+				uniqueRoutes[key] = uniqueRoute{
+					Service: service,
+					Tags: tags,
+				}
 			}
 		}
 	}
@@ -187,17 +205,19 @@ func convert(rules []rules.Rule, instances []api.ServiceInstance) ([]Cluster, er
 			instanceTags[tag] = struct{}{}
 		}
 
-		for key, tags := range uniqueRoutes {
-			isSubset := true
-			for _, tag := range tags {
-				if _, exists := instanceTags[tag]; !exists {
-					isSubset = false
-					break
+		for key, uniqueRoute := range uniqueRoutes {
+			if uniqueRoute.Service == instance.ServiceName {
+				isSubset := true
+				for _, tag := range uniqueRoute.Tags {
+					if _, exists := instanceTags[tag]; !exists {
+						isSubset = false
+						break
+					}
 				}
-			}
 
-			if isSubset {
-				hostMap[key] = append(hostMap[key], host)
+				if isSubset {
+					hostMap[key] = append(hostMap[key], host)
+				}
 			}
 		}
 	}
