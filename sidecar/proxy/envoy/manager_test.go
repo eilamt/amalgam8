@@ -171,11 +171,11 @@ func TestConvert2(t *testing.T) {
 		{
 			ID:          "abcdef",
 			Destination: "service2",
-			Actions:     json.RawMessage([]byte{}),
+			Actions:     []rules.FancyAction{},
 		},
 	}
 
-	configRoot, err := generateConfig(rules, instances)
+	configRoot, err := generateConfig(rules, instances, "gateway")
 	assert.NoError(t, err)
 
 	data, err := json.MarshalIndent(configRoot, "", "  ")
@@ -260,6 +260,32 @@ func TestBookInfo(t *testing.T) {
           }
         ]
       }
+    },
+{
+      "id": "c2a22912-9479-4e0b-839b-ffe76bb0c579",
+      "priority": 10,
+      "destination": "ratings",
+      "match": {
+        "headers": {
+          "Cookie": ".*?user=jason"
+        },
+        "source": {
+          "name": "reviews",
+          "tags": [
+            "v2"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "action": "delay",
+          "duration": 7,
+          "probability": 1,
+          "tags": [
+            "v1"
+          ]
+        }
+      ]
     }
   ]
 `)
@@ -358,11 +384,67 @@ func TestBookInfo(t *testing.T) {
 	err = json.Unmarshal(instanceBytes, &instances)
 	assert.NoError(t, err)
 
-	configRoot, err := generateConfig(ruleList, instances)
+	configRoot, err := generateConfig(ruleList, instances, "ratings")
 	assert.NoError(t, err)
 
 	data, err := json.MarshalIndent(configRoot, "", "  ")
 	assert.NoError(t, err)
 
 	fmt.Println(string(data))
+}
+
+func TestFaults(t *testing.T) {
+	ruleBytes := []byte(`[{
+      "id": "c2a22912-9479-4e0b-839b-ffe76bb0c579",
+      "priority": 10,
+      "destination": "ratings",
+      "match": {
+        "headers": {
+          "Cookie": ".*?user=jason"
+        },
+        "source": {
+          "name": "reviews",
+          "tags": [
+            "v2"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "action": "delay",
+          "duration": 7,
+          "probability": 1,
+          "tags": [
+            "v1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c67226e2-8506-4e75-9e47-84d9d24f0326",
+      "priority": 1,
+      "destination": "reviews",
+      "route": {
+        "backends": [
+          {
+            "tags": [
+              "v1"
+            ]
+          }
+        ]
+      }
+    }]`)
+
+	var ruleList []rules.Rule
+	err := json.Unmarshal(ruleBytes, &ruleList)
+	assert.NoError(t, err)
+
+	filters, err := buildFaults(ruleList, "ratings")
+	assert.NoError(t, err)
+
+	data, err := json.MarshalIndent(filters, "", "  ")
+	assert.NoError(t, err)
+
+	fmt.Println(string(data))
+
 }

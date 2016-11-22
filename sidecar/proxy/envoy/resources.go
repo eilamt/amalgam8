@@ -1,13 +1,35 @@
 package envoy
 
-type HTTPFilterConfig struct {
+type HTTPAbortFilter struct {
+	Percent    int `json:"abort_percent,omitempty"`
+	HTTPStatus int `json:"http_status,omitempty"`
+}
+
+type HTTPDelayFilter struct {
+	Type     string `json:"type,omitempty"`
+	Percent  int    `json:"fixed_delay_percent,omitempty"`
+	Duration int    `json:"fixed_duration_ms,omitempty"`
+}
+
+type HTTPHeader struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type HTTPFilterFaultConfig struct {
+	Abort   *HTTPAbortFilter `json:"abort,omitempty"`
+	Delay   *HTTPDelayFilter `json:"delay,omitempty"`
+	Headers []HTTPHeader     `json:"headers,omitempty"`
+}
+
+type HTTPFilterRouterConfig struct {
 	DynamicStats bool `json:"dynamic_stats"`
 }
 
 type HTTPFilter struct {
-	Type   string           `json:"type"`
-	Name   string           `json:"name"`
-	Config HTTPFilterConfig `json:"config"`
+	Type   string      `json:"type"`
+	Name   string      `json:"name"`
+	Config interface{} `json:"config"`
 }
 
 type Route struct {

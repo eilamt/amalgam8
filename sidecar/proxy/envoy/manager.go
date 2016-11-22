@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/amalgam8/amalgam8/controller/rules"
 	"github.com/amalgam8/amalgam8/registry/api"
 )
@@ -16,18 +17,20 @@ type Manager interface {
 	Update(instances []api.ServiceInstance, rules []rules.Rule) error
 }
 
-func NewManager() Manager {
+func NewManager(serviceName string) Manager {
 	return &manager{
-		service: NewService("/etc/envoy.json"),
+		serviceName: serviceName,
+		service:     NewService("/etc/envoy.json"),
 	}
 }
 
 type manager struct {
-	service Service
+	serviceName string
+	service     Service
 }
 
 func (m *manager) Update(instances []api.ServiceInstance, rules []rules.Rule) error {
-	conf, err := generateConfig(rules, instances)
+	conf, err := generateConfig(rules, instances, m.serviceName)
 	if err != nil {
 		return err
 	}
@@ -94,10 +97,10 @@ func endpointToHost(endpoint api.ServiceEndpoint) Host {
 	}
 }
 
-func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, error) {
+func generateConfig(rules []rules.Rule, instances []api.ServiceInstance, serviceName string) (Root, error) {
 	clusters, err := convert(rules, instances)
 	if err != nil {
-		return Root{}, nil
+		return Root{}, err
 	}
 
 	clusterNames := make([]string, len(clusters))
@@ -107,7 +110,12 @@ func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, 
 
 	routes, err := buildRoutes(clusterNames)
 	if err != nil {
-		return Root{}, nil
+		return Root{}, err
+	}
+
+	filters, err := buildFaults(rules, serviceName)
+	if err != nil {
+		return Root{}, err
 	}
 
 	return Root{
@@ -130,13 +138,7 @@ func generateConfig(rules []rules.Rule, instances []api.ServiceInstance) (Root, 
 									},
 								},
 							},
-							Filters: []HTTPFilter{
-								{
-									Type:   "decoder",
-									Name:   "router",
-									Config: HTTPFilterConfig{},
-								},
-							},
+							Filters: filters,
 						},
 					},
 				},
@@ -251,4 +253,88 @@ func buildRoutes(clusters []string) ([]Route, error) {
 	}
 
 	return routes, nil
+}
+
+type Source struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
+type Match struct {
+	Headers map[string]string `json:"headers"`
+	Source  Source            `json:"source"`
+}
+
+func buildFaults(ctlrRules []rules.Rule, serviceName string) ([]HTTPFilter, error) {
+
+	filters := []HTTPFilter{}
+
+	for _, rule := range ctlrRules {
+
+		headers := make([]HTTPHeader, 0)
+		if rule.Match != nil {
+			matchBytes, err := rule.Match.MarshalJSON()
+			if err != nil {
+				logrus.WithError(err).Error("Could not marshall match field")
+				return filters, err
+			}
+			match := Match{}
+			err = json.Unmarshal(matchBytes, &match)
+			if err != nil {
+				logrus.WithError(err).Error("could not unmarshall match field")
+				return filters, err
+			}
+
+			headers = make([]HTTPHeader, 0, len(match.Headers))
+			for key, val := range match.Headers {
+				headers = append(headers, HTTPHeader{
+					Name:  key,
+					Value: val,
+				})
+			}
+		}
+
+		if rule.Destination == serviceName {
+			for _, action := range rule.Actions {
+				switch action.GetType() {
+				case "delay":
+					delay := action.Internal().(rules.DelayAction)
+					filter := HTTPFilter{
+						Type: "decoder",
+						Name: "fault",
+						Config: &HTTPFilterFaultConfig{
+							Delay: &HTTPDelayFilter{
+								Type:     "fixed",
+								Percent:  delay.Probability,
+								Duration: delay.Duration,
+							},
+							Headers: headers,
+						},
+					}
+					filters = append(filters, filter)
+				case "abort":
+					abort := action.Internal().(rules.AbortAction)
+					filter := HTTPFilter{
+						Type: "decoder",
+						Name: "fault",
+						Config: &HTTPFilterFaultConfig{
+							Abort: &HTTPAbortFilter{
+								Percent:    abort.Probability,
+								HTTPStatus: abort.ReturnCode,
+							},
+							Headers: headers,
+						},
+					}
+					filters = append(filters, filter)
+				}
+			}
+		}
+	}
+
+	filters = append(filters, HTTPFilter{
+		Type:   "decoder",
+		Name:   "router",
+		Config: HTTPFilterRouterConfig{},
+	})
+	return filters, nil
 }
