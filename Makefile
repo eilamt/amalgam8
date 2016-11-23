@@ -59,6 +59,9 @@ EXAMPLES_RELEASE_NAME	:= a8examples-$(APP_VER)
 # build flags to create a statically linked binary (required for scratch-based image)
 BUILDFLAGS	:= -a -installsuffix nocgo -tags netgo
 
+# linker flags to strip symbol tables and debug information
+LDFLAGS     := -s -w
+
 # linker flags to set build info variables
 BUILD_SYM	:= github.com/amalgam8/amalgam8/pkg/version
 LDFLAGS		+= -X $(BUILD_SYM).version=$(APP_VER)
@@ -185,21 +188,40 @@ dockerize.sidecar:
 #-- release
 #---------------
 
-.PHONY: release release.registry release.controller release.sidecar release.examples
+.PHONY: release release.registry release.controller release.sidecar release.examples compress compress.registry compress.controller compress.sidecar
 
 release: release.registry release.controller release.sidecar release.examples
 
-release.registry:
+
+compress: COMPRESSED_FILE := 
+compress:
+	@upx -qqt $(COMPRESSED_FILE); RESULT=$$?; if [ $$RESULT -eq 2 ]; then \
+		echo "--> compressing $(COMPRESSED_FILE)"; \
+		upx -qq --best --ultra-brute $(COMPRESSED_FILE); \
+	elif [ $$RESULT -eq 1 ]; then \
+		false; \
+	fi
+	
+compress.registry: tools.upx
+	@make --no-print-directory compress COMPRESSED_FILE=$(BINDIR)/$(REGISTRY_APP_NAME)
+	
+compress.controller: tools.upx
+	@make --no-print-directory compress COMPRESSED_FILE=$(BINDIR)/$(CONTROLLER_APP_NAME)
+
+compress.sidecar: tools.upx
+	@make --no-print-directory compress COMPRESSED_FILE=$(BINDIR)/$(SIDECAR_APP_NAME)
+	
+release.registry: compress.registry
 	@echo "--> packaging registry for release"
 	@mkdir -p $(RELEASEDIR) 
 	@tar -czf $(RELEASEDIR)/$(REGISTRY_RELEASE_NAME).tar.gz --transform 's:^.*/::' $(BINDIR)/$(REGISTRY_APP_NAME) README.md LICENSE
 
-release.controller:
+release.controller: compress.controller
 	@echo "--> packaging controller for release"
 	@mkdir -p $(RELEASEDIR) 
 	@tar -czf $(RELEASEDIR)/$(CONTROLLER_RELEASE_NAME).tar.gz --transform 's:^.*/::' $(BINDIR)/$(CONTROLLER_APP_NAME) README.md LICENSE
 
-release.sidecar:
+release.sidecar: compress.sidecar
 	@echo "--> packaging sidecar for release"
 	@mkdir -p $(RELEASEDIR) $(BUILDDIR) \
 		$(BUILDDIR)/opt/a8_lualib \
@@ -225,9 +247,9 @@ release.examples:
 #---------------
 #-- tools
 #---------------
-.PHONY: tools tools.goimports tools.golint tools.govet tools.glide
+.PHONY: tools tools.goimports tools.golint tools.govet tools.glide tools.upx
 
-tools: tools.goimports tools.golint tools.govet tools.glide
+tools: tools.goimports tools.golint tools.govet tools.glide tools.upx
 
 tools.goimports:
 	@command -v goimports >/dev/null ; if [ $$? -ne 0 ]; then \
@@ -254,3 +276,14 @@ tools.glide:
 		wget -qO- https://github.com/Masterminds/glide/releases/download/0.10.2/glide-0.10.2-linux-amd64.tar.gz | tar xz -C /tmp/glide-0.10.2-linux-amd64; \
 		cp /tmp/glide-0.10.2-linux-amd64/linux-amd64/glide ~/bin; \
     fi
+
+tools.upx:
+	@command -v upx >/dev/null ; if [ $$? -ne 0 ]; then \
+		echo "--> installing upx"; \
+		UPX_VERSION="3.91"; \
+		UPX_ARCH="$(GOARCH)_$(GOOS)" # only linux (amd64|i386) are supported; \
+		UPX_RELEASE="upx-$$UPX_VERSION-$$UPX_ARCH"; \
+		mkdir -p /tmp/$$UPX_RELEASE; \
+		wget -qO- https://github.com/upx/upx/releases/download/v$$UPX_VERSION/$$UPX_RELEASE.tar.bz2 | tar xj -C /tmp/$$UPX_RELEASE; \
+		cp /tmp/$$UPX_RELEASE/$$UPX_RELEASE/upx ~/bin; \
+	fi
